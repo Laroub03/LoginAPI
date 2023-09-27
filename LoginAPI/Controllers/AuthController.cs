@@ -29,6 +29,16 @@ namespace LoginAPI.Controllers
         [HttpPost("register")]
         public ActionResult<User> Register(UserDto request)
         {
+            // Validate the role
+            if (string.IsNullOrEmpty(request.Role) ||
+                !(request.Role == UserRoles.Editor1 || request.Role == UserRoles.Editor2 ||
+                  request.Role == UserRoles.Viewer1 || request.Role == UserRoles.Viewer2))
+            {
+                return BadRequest("Invalid role");
+            }
+
+
+
             // Hash the incoming password using BCrypt
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
@@ -36,11 +46,14 @@ namespace LoginAPI.Controllers
             var newUser = new User
             {
                 Username = request.Username,
-                PasswordHash = passwordHash
+                PasswordHash = passwordHash,
             };
 
             // Add the new user to the in-memory storage of users
             _users[request.Username] = newUser;
+
+            // Set the user’s role
+            newUser.Role = request.Role;
 
             // Log the registration of the new user
             Console.WriteLine($"User registered: {newUser.Username}");
@@ -86,7 +99,8 @@ namespace LoginAPI.Controllers
             // Define claims for the JWT token (in this case, the user's name)
             List<Claim> claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.Username)
+                new Claim(ClaimTypes.Name, user.Username),
+                new Claim(ClaimTypes.Role, user.Role) // Add Role claim
             };
 
             // Generate a symmetric security key
@@ -109,5 +123,6 @@ namespace LoginAPI.Controllers
             // Return the JWT token
             return jwt;
         }
+
     }
 }
